@@ -16,6 +16,7 @@
     "test": "npm run karma -- --single-run --log-level error && npm run test-rendering -- --force",
     "karma": "karma start test/karma.config.js",
     "start": "npm run serve-examples",
+    "build": "parcel build",
     "serve-examples": "webpack-dev-server --config examples/webpack/config.js --mode development --watch",
     "build-examples": "webpack --config examples/webpack/config.js --mode production",
     "build-package": "npm run transpile && npm run copy-css && node tasks/prepare-package && shx cp README.md build/ol",
@@ -90,7 +91,7 @@
     "webpack": "4.28.3",
     "webpack-cli": "^3.0.8",
     "webpack-dev-middleware": "^3.4.0",
-    "webpack-dev-server": "^3.1.10",
+    "webpack-dev-server": "^3.1.14",
     "yargs": "^12.0.2"
   },
   "eslintConfig": {
