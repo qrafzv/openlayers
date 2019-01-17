@@ -1,24 +1,26 @@
 /**
-* @module ol/source/N2Cluster
-*/
+ * @module ol/source/N2Cluster
+ */
 
 import {getUid} from '../util.js';
 import Cluster from './Cluster.js';
 import {transformExtent} from '../proj.js';
 import {getCenter} from '../extent.js';
-
 import {buffer, createEmpty, createOrUpdateFromCoordinate} from '../extent.js';
 import Point from '../geom/Point.js';
 import Feature from '../Feature.js';
-
 import {scale as scaleCoordinate, add as addCoordinate} from '../coordinate.js';
 /**
-* @classdesc
-* Layer source to cluster vector data. Working module for nunaliit webgis
-* system
-*/
+ * @classdesc
+ * Layer source to cluster vector data. Working module for nunaliit webgis
+ * system
+ * @api
+ */
 class N2Cluster extends Cluster {
 
+  /**
+   * @param {Options} options CLuster options
+   */
   constructor(options) {
     super({
       attributions: options.attributions,
@@ -26,90 +28,78 @@ class N2Cluster extends Cluster {
     });
 
     /**
-    * APIProperty: distance
-    * {Integer} Pixel distance between features that should be considered a
-    *     single cluster.  Default is 20 pixels.
-    */
+     * @type {number|undefined}
+     * @protected
+     */
     this.distance = options.distance !== undefined ? options.distance : 20;
 
     /**
-    * APIProperty: minimumPolygonPixelSize
-    * {Integer} Minimum pixel size that a polygon has to be so that it is
-    * not converted to a point.  Default is 20 pixels.
-    */
+     * @type {number}
+     */
     this.minimumPolygonPixelSize = options.minimumPolygonPixelSize !== undefined ?
       options.minimumPolygonPixelSize : this.distance;
 
     /**
-    * APIProperty: minimumLinePixelSize
-    * {Integer} Minimum pixel size that a line has to be so that it is
-    * not converted to a point.  Default is 20 pixels.
-    */
+     * @type {number}
+     */
     this.minimumLinePixelSize = options.minimumLinePixelSize !== undefined ?
       options.minimumLinePixelSize : this.distance;
 
     /**
-    * APIProperty: disableDynamicClustering
-    * {Boolean} If true, disable default behaviour which is to turn small
-    * polygons and lines into cluster, but leaving larger ones from clustering.
-    */
+     * @type {boolean}
+     */
     this.disableDynamicClustering = options.disableDynamicClustering !== undefined ? options.disableDynamicClustering : false;
 
     /**
-    * APIProperty: clusterPointsOnly
-    * {Boolean} If true, skip lines and polygons during clustering. The option
-    * "disableDynamicClustering" must be set for this option to take effect.
-    */
+     * @type {boolean}
+     */
     this.clusterPointsOnly = options.clusterPointsOnly !== undefined ? options.clusterPointsOnly : false;
 
     /**
-    * APIProperty: threshold
-    * {Integer} Optional threshold below which original features will be
-    *     added to the layer instead of clusters.  For example, a threshold
-    *     of 3 would mean that any time there are 2 or fewer features in
-    *     a cluster, those features will be added directly to the layer instead
-    *     of a cluster representing those features.  Default is null (which is
-    *     equivalent to 1 - meaning that clusters may contain just one feature).
-    */
+     * @type {number}
+     */
     this.threshold = options.threshold !== undefined ? options.threshold : null;
 
     /**
-    * Property: resolution
-    * {Float} The resolution (map units per pixel) of the current cluster set.
-    */
+     *  @type {number}
+     */
     this.resolution = 1;
 
     /**
-    * Property: projection
-    * {<OpenLayers.Projection>} The projection currently used by the map
-    */
+     *  @type {string}
+     */
     this.projection = null;
 
     /**
-    * Property: clusterPrefix
-    * {Integer} The string portion of the identifiers to be given to clusters.
-    */
+     * @type {string}
+     */
     this.clusterPrefix = options.clusterPrefix;
 
     /**
-    * Property: clusterId
-    * {Integer} The integer portion of the next identifier to be given to clusters.
-    */
+     * @type {number}
+     */
     this.clusterId = 1;
 
   }
-
-  setResolution(resolution) {
-    this.resolution = resolution;
-  }
-
-  setProjection(projection) {
-    this.projection = projection;
+  /**
+   * Loading the feature from the layer source, and config the resolution and projection
+   * @override
+   */
+  loadFeatures(extent, resolution, projection) {
+    this.source.loadFeatures(extent, resolution, projection);
+    if (resolution !== this.resolution) {
+      this.clear();
+      this.resolution = resolution;
+      this.projection = projection;
+      this.cluster();
+      this.addFeatures(this.features);
+    }
   }
 
   /**
-  * @protected
-  */
+   * The cluster function for cluster Point, Line and Geometry
+   * @override
+   */
   cluster() {
     if (this.resolution === undefined) {
       return;
@@ -151,95 +141,6 @@ class N2Cluster extends Cluster {
       }
     }
   }
-
-  /**
-  * Legacy clustering
-  */
-  // performClustering(features){
-  //  var resolution = this.resolution;
-  //  var clusters = [];
-  //  var featuresToAdd = [];
-  //  var feature, clustered, cluster;
-  //  for(var i=0; i<features.length; ++i) {
-  //      feature = features[i];
-  //      if( !this._isEligibleFeature(feature) ){
-  // 	       featuresToAdd.push(feature);
-  //
-  //      } else if(feature.geometry) {
-  // 	     clustered = false;
-  //   		 for(var j=clusters.length-1; j>=0; --j) {
-  //   		     cluster = clusters[j];
-  //   		     if(this._shouldCluster(cluster, feature)) {
-  //   			        this._addToCluster(cluster, feature);
-  //   			           clustered = true;
-  //   			           break;
-  //   		     };
-  //   		 };
-  //   		 if(!clustered) {
-  //   			 var c = this._createCluster(feature);
-  //   		     clusters.push(c);
-  //   		     featuresToAdd.push(c);
-  //   		 };
-  //      };
-  //  };
-  //
-  //  var finalFeatures = [];
-  //  //post-process the finalFeatures
-  //  if( this.threshold > 1 ) {
-  //      for(var i=0, len=featuresToAdd.length; i<len; ++i) {
-  // 	 var candidate = featuresToAdd[i];
-  // 	 if( candidate.cluster
-  // 	  && candidate.cluster.length < this.threshold ) {
-  // 		 candidate.cluster.forEach(function(f){
-  // 		 finalFeatures[finalFeatures.length] = f;
-  // 		 });
-  // 	 } else {
-  // 		 finalFeatures[finalFeatures.length] = candidate;
-  // 	 };
-  //      };
-  //
-  //  } else {
-  // 		 finalFeatures = featuresToAdd;
-  //  };
-  //
-  // 	 return finalFeatures;
-  //  },
-  //
-  // /**
-  //    * Method: belongToCluster
-  //    * Determine whether to include a feature in a given cluster.
-  //    *
-  //    * Parameters:
-  //    * cluster - {<OpenLayers.Feature.Vector>} A cluster.
-  //    * feature - {<OpenLayers.Feature.Vector>} A feature.
-  //    *
-  //    * Returns:
-  //    * {Boolean} The feature should be included in the cluster.
-  //    */
-  //   _belongToCluster(cluster, feature) {
-  //       var cc = getCenter(cluster.getGeometry().computeExtent());
-  //       var fc = getCenter(feature.getGeometry().computeExtent());
-  //       var distance = (
-  //           Math.sqrt(
-  //               Math.pow((cc.lon - fc.lon), 2) + Math.pow((cc.lat - fc.lat), 2)
-  //           ) / this.resolution
-  //       );
-  //       return (distance <= this.distance);
-  //   },
-  //
-  //   /**
-  //    * Method: addToCluster
-  //    * Add a feature to a cluster.
-  //    *
-  //    * Parameters:
-  //    * cluster - {<OpenLayers.Feature.Vector>} A cluster.
-  //    * feature - {<OpenLayers.Feature.Vector>} A feature.
-  //    */
-  //   _addToCluster(cluster, feature) {
-  //       cluster.cluster.push(feature);
-  //       cluster.attributes.count += 1;
-  //   },
-
 
   /**
    * @param {Array<Feature>} features Features
@@ -324,19 +225,12 @@ class N2Cluster extends Cluster {
   }
 
   /**
-  * Method: _computeFullBoundingBox
-  * Compute the bounding box of the original geometry. This may differ from
-  * the bounding box of the geometry on the feature since this can be a
-  * simplification.
-  *
-  * Returns:
-  * {<OpenLayers.Bounds>} The bounding box of the original geometry translated for
-  * the current map projection.
-  */
-
-  /**
+   * Compute the bounding box of the original geometry. This may differ from
+   * the bounding box of the geometry on the feature since this can be a
+   * simplification.
    * @param {Feature} f The bounding box value from nunaliit project, which considers both the simplified geometries and original one.
    * @return {Array<number>} Extent
+   * @protected
    */
   _computeFullBoundingBox(f) {
     return this._ComputeFeatureOriginalBboxForMapProjection(f, this.projection);
