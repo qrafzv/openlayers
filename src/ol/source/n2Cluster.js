@@ -1,6 +1,7 @@
 /**
-* @module ol/source/n2Cluster
+* @module ol/source/N2Cluster
 */
+
 import {getUid} from '../util.js';
 import Cluster from './Cluster.js';
 import {transformExtent} from '../proj.js';
@@ -16,7 +17,7 @@ import {scale as scaleCoordinate, add as addCoordinate} from '../coordinate.js';
 * Layer source to cluster vector data. Working module for nunaliit webgis
 * system
 */
-class n2Cluster extends Cluster {
+class N2Cluster extends Cluster {
 
   constructor(options) {
     super({
@@ -37,7 +38,7 @@ class n2Cluster extends Cluster {
     * not converted to a point.  Default is 20 pixels.
     */
     this.minimumPolygonPixelSize = options.minimumPolygonPixelSize !== undefined ?
-    options.minimumPolygonPixelSize : this.distance;
+      options.minimumPolygonPixelSize : this.distance;
 
     /**
     * APIProperty: minimumLinePixelSize
@@ -45,14 +46,14 @@ class n2Cluster extends Cluster {
     * not converted to a point.  Default is 20 pixels.
     */
     this.minimumLinePixelSize = options.minimumLinePixelSize !== undefined ?
-    options.minimumLinePixelSize : this.distance;
+      options.minimumLinePixelSize : this.distance;
 
     /**
     * APIProperty: disableDynamicClustering
     * {Boolean} If true, disable default behaviour which is to turn small
     * polygons and lines into cluster, but leaving larger ones from clustering.
     */
-    this.disableDynamicClustering =  options.disableDynamicClustering !== undefined ? options.disableDynamicClustering : false;
+    this.disableDynamicClustering = options.disableDynamicClustering !== undefined ? options.disableDynamicClustering : false;
 
     /**
     * APIProperty: clusterPointsOnly
@@ -98,11 +99,11 @@ class n2Cluster extends Cluster {
 
   }
 
-  setResolution(resolution){
+  setResolution(resolution) {
     this.resolution = resolution;
   }
 
-  setProjection(projection){
+  setProjection(projection) {
     this.projection = projection;
   }
 
@@ -121,15 +122,15 @@ class n2Cluster extends Cluster {
     * @type {!Object<string, boolean>}
     */
     const clustered = {};
-    const inEligibleList ={};
+    const inEligibleList = {};
     for (let i = 0, ii = features.length; i < ii; i++) {
       const feature = features[i];
       const uid = getUid(feature);
-      if ( !this._isEligibleFeature(feature) ) {
+      if (!this._isEligibleFeature(feature)) {
         inEligibleList[uid] = true;
         continue;
       }
-      if(!(getUid(feature) in clustered)) {
+      if (!(getUid(feature) in clustered)) {
 
         const coordinates = getCenter(feature.getGeometry().computeExtent());
         createOrUpdateFromCoordinate(coordinates, extent);
@@ -146,7 +147,7 @@ class n2Cluster extends Cluster {
             return false;
           }
         });
-        this.features.push(this.createCluster(neightbors));
+        this.features.push(this.createCluster(neighbors));
       }
     }
   }
@@ -239,91 +240,85 @@ class n2Cluster extends Cluster {
   //       cluster.attributes.count += 1;
   //   },
 
+
   /**
-  * Method: createCluster
-  * Given a feature, create a cluster.
-  *
-  * Parameters:
-  * feature - {<OpenLayers.Feature.Vector>}
-  *
-  * Returns:
-  * {<OpenLayers.Feature.Vector>} A cluster.
-  */
+   * @param {Array<Feature>} features Features
+   * @return {Feature} The cluster feature.
+   * @protected
+   */
   createCluster(features) {
 
     const centroid = [0, 0];
-    for (let i = features.length-1; i>= 0; --i) {
-      var centerDelta = getCenter(feature[i].getGeometry().computeExtent());
-      if(centerDelta) {
+    for (let i = features.length - 1; i >= 0; --i) {
+      const centerDelta = getCenter(features[i].getGeometry().computeExtent());
+      if (centerDelta) {
         addCoordinate(centroid, centerDelta);
       }
     }
-    scaleCoordinate(centroid, 1/ features.length);
+    scaleCoordinate(centroid, 1 / features.length);
 
     const cluster = new Feature(new Point(centroid));
     cluster.set('features', features);
-    cluster.set('fid', this.clusterPrefix + this.clusterId );
+    cluster.set('fid', this.clusterPrefix + this.clusterId);
     ++this.clusterId;
     return cluster;
 
   }
 
   /**
-  * Method: _isEligibleFeature
-  * Returns true if a feature should be clustered
-  *
-  * Returns:
-  * {Boolean} True if the feature should be considered for clusters
-  */
+   * @param {Feature} feature The feature from source
+   * @return {boolean} true if a feature is eligible feature to be clustered
+   * @protected
+   */
   _isEligibleFeature(feature) {
-    if( feature.n2DisableClustering ){
+    if (feature.n2DisableClustering) {
       return false;
-    };
+    }
 
     // By default, cluster everything
-    var eligible = true;
+    let eligible = true;
 
-    if( !this.disableDynamicClustering ) {
+    if (!this.disableDynamicClustering) {
       // Dynamic Clustering
       // Small polygons and lines are turned into a cluster
       eligible = false;
 
-      var extent = this._computeFullBoundingBox(feature);
-      if( extent ){
+      const extent = this._computeFullBoundingBox(feature);
+      if (extent) {
         // If the original bounds are larger than what is expected
         // by the resolution, do not cluster. At one point, the correct
         // geometry will arrive to show this feature.
-        let xLen =(extent[2]-extent[0])/ this.resolution;
-        let yLen = (extent[3]-extent[1]) / this.resolution;
-        if( (xLen) < this.minimumLinePixelSize
-        && (yLen) < this.minimumLinePixelSize ) {
+        const xLen = (extent[2] - extent[0]) / this.resolution;
+        const yLen = (extent[3] - extent[1]) / this.resolution;
+        if ((xLen) < this.minimumLinePixelSize
+        && (yLen) < this.minimumLinePixelSize) {
           eligible = true;
-        };
+        }
       } else {
         // We are unable to compute the bounds for this feature.
         // Use the geometry for the purpose of clustering
-        if( feature.getGeometry().getType() == 'Point'){
+        if (feature.getGeometry().getType() == 'Point') {
           eligible = true;
         } else {
-          var bounds = cluster.getGeometry().computeExtent();
+          const bounds = feature.getGeometry().computeExtent();
 
-          let xLen = bounds.getWidth() / this.resolution;
-          let yLen = bounds.getHeight() / this.resolution;
-          if( (xLen) < this.minimumLinePixelSize
-          && (yLen) < this.minimumLinePixelSize ) {
+          const xLen = bounds.getWidth() / this.resolution;
+          const yLen = bounds.getHeight() / this.resolution;
+          if ((xLen) < this.minimumLinePixelSize
+          && (yLen) < this.minimumLinePixelSize) {
             eligible = true;
-          };
-        };
-      };
+          }
+        }
+      }
 
-    } else if( this.clusterPointsOnly ){
+    } else if (this.clusterPointsOnly) {
       // Cluster Point Only
       // Do not cluster polygons and lines
       eligible = false;
-      if( feature.getGeometry.getType() == 'Point'){
+      if (feature.getGeometry.getType() == 'Point') {
         eligible = true;
-      };
-    };
+      }
+    }
 
     return eligible;
   }
@@ -338,10 +333,15 @@ class n2Cluster extends Cluster {
   * {<OpenLayers.Bounds>} The bounding box of the original geometry translated for
   * the current map projection.
   */
+
+  /**
+   * @param {Feature} f The bounding box value from nunaliit project, which considers both the simplified geometries and original one.
+   * @return {Array<number>} Extent
+   */
   _computeFullBoundingBox(f) {
-    return _ComputeFeatureOriginalBboxForMapProjection(f, this.projection);
+    return this._ComputeFeatureOriginalBboxForMapProjection(f, this.projection);
   }
-  _ComputeFeatureOriginalBboxForMapProjection(f, mapProj){
+  _ComputeFeatureOriginalBboxForMapProjection(f, mapProj) {
     // Each feature has a projection stored at f.n2GeomProj
     // that represents the original projection for a feature
     //
@@ -349,32 +349,32 @@ class n2Cluster extends Cluster {
     // the full geometry bbox converted for the map projection, if
     // already computed.
 
-    if( f && f.n2ConvertedBbox ){
+    if (f && f.n2ConvertedBbox) {
       return f.n2ConvertedBbox;
-    };
+    }
 
-    var geomBounds = undefined;
-    if( f.data
+    let geomBounds = undefined;
+    if (f.data
       && f.data.nunaliit_geom
       && f.data.nunaliit_geom.bbox
       && f.n2GeomProj
-      && mapProj ){
+      && mapProj) {
 
-        var bbox = f.data.nunaliit_geom.bbox;
-        if( Array.isArray(bbox)
-        && bbox.length >= 4 ){
-          geomBounds = bbox;
+      const bbox = f.data.nunaliit_geom.bbox;
+      if (Array.isArray(bbox)
+        && bbox.length >= 4) {
+        geomBounds = bbox;
 
-          if( mapProj.getCode() !== f.n2GeomProj.getCode ){
-            geomBounds = transformExtent(bbox,f.n2GeomProj, mapProj);
-          };
+        if (mapProj.getCode() !== f.n2GeomProj.getCode) {
+          geomBounds = transformExtent(bbox, f.n2GeomProj, mapProj);
+        }
 
-          f.n2ConvertedBbox = geomBounds;
-        };
-      };
+        f.n2ConvertedBbox = geomBounds;
+      }
+    }
 
-      return geomBounds;
-    };
+    return geomBounds;
+  }
 }
 
-export default n2Cluster;
+export default N2Cluster;
