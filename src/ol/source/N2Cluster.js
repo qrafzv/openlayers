@@ -22,10 +22,7 @@ class N2Cluster extends Cluster {
    * @param {Options} options CLuster options
    */
   constructor(options) {
-    super({
-      attributions: options.attributions,
-      wrapX: options.wrapX
-    });
+    super(options);
 
     /**
      * @type {number|undefined}
@@ -101,6 +98,7 @@ class N2Cluster extends Cluster {
    * @override
    */
   cluster() {
+    var that_ = this;
     if (this.resolution === undefined) {
       return;
     }
@@ -112,12 +110,13 @@ class N2Cluster extends Cluster {
     * @type {!Object<string, boolean>}
     */
     const clustered = {};
-    const inEligibleList = {};
+    const ineligibleList = {};
     for (let i = 0, ii = features.length; i < ii; i++) {
-      const feature = features[i];
+      let feature = features[i];
       const uid = getUid(feature);
       if (!this._isEligibleFeature(feature)) {
-        inEligibleList[uid] = true;
+        ineligibleList[uid] = true;
+        this.features.push(feature);
         continue;
       }
       if (!(getUid(feature) in clustered)) {
@@ -130,7 +129,8 @@ class N2Cluster extends Cluster {
         neighbors = neighbors.filter(function(neighbor) {
           const uid = getUid(neighbor);
           if (!(uid in clustered) &&
-          !((uid in inEligibleList) || (!this._isEligibleFeature(feature)))) {
+              !( (uid in ineligibleList) ||
+                  !that_._isEligibleFeature(feature) ) ) {
             clustered[uid] = true;
             return true;
           } else {
@@ -198,13 +198,13 @@ class N2Cluster extends Cluster {
       } else {
         // We are unable to compute the bounds for this feature.
         // Use the geometry for the purpose of clustering
-        if (feature.getGeometry().getType() == 'Point') {
+        if (feature.getGeometry().getType().indexOf('Point') >= 0) {
           eligible = true;
         } else {
           const bounds = feature.getGeometry().computeExtent();
 
-          const xLen = bounds.getWidth() / this.resolution;
-          const yLen = bounds.getHeight() / this.resolution;
+          const xLen = (bounds[2]-bounds[0])/ this.resolution;
+          const yLen = (bounds[3]-bounds[1]) / this.resolution;
           if ((xLen) < this.minimumLinePixelSize
           && (yLen) < this.minimumLinePixelSize) {
             eligible = true;
@@ -216,7 +216,7 @@ class N2Cluster extends Cluster {
       // Cluster Point Only
       // Do not cluster polygons and lines
       eligible = false;
-      if (feature.getGeometry.getType() == 'Point') {
+      if (feature.getGeometry().getType().indexOf('Point') >= 0) {
         eligible = true;
       }
     }
